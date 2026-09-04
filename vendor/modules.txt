@@ -35,7 +35,7 @@ github.com/alibabacloud-go/tea-utils/service
 # github.com/alibabacloud-go/tea-utils/v2 v2.0.7
 ## explicit; go 1.14
 github.com/alibabacloud-go/tea-utils/v2/service
-# github.com/aliyun/alibaba-cloud-sdk-go v1.63.99
+# github.com/aliyun/alibaba-cloud-sdk-go v1.63.99 => github.com/SammZhu/alibaba-cloud-sdk-go v0.0.0-20260904080228-3f66008afcd7
 ## explicit; go 1.13
 github.com/aliyun/alibaba-cloud-sdk-go/sdk
 github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth
@@ -863,3 +863,4 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.3.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
+# github.com/aliyun/alibaba-cloud-sdk-go => github.com/SammZhu/alibaba-cloud-sdk-go v0.0.0-20260904080228-3f66008afcd7
