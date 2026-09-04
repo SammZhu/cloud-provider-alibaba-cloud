@@ -99,3 +99,10 @@ require (
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
+
+// Apsara Stack gateways serve LoadBalancer.Tags as a bare array where the SDK
+// declares the documented {"Tag": [...]} wrapper, so DescribeLoadBalancers
+// returns HTTP 200 with a complete body that the client then throws away.
+// The fork adds an UnmarshalJSON accepting both shapes; nothing else differs
+// from v1.63.99, which is the version this module already required.
+replace github.com/aliyun/alibaba-cloud-sdk-go => github.com/SammZhu/alibaba-cloud-sdk-go v0.0.0-20260904080228-3f66008afcd7
