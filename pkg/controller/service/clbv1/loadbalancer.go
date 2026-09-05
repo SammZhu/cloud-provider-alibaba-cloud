@@ -415,7 +415,10 @@ func setModelDefaultValue(mgr *LoadBalancerManager, mdl *model.LoadBalancer, ann
 	}
 
 	if mdl.LoadBalancerAttribute.InstanceChargeType.IsPayByCLCU() {
-		mdl.LoadBalancerAttribute.InstanceChargeType = model.PayByCLCU
+		// IsPayByCLCU() is true for the empty string, so this branch is also the
+		// no-annotation case — which is why the default belongs here rather than
+		// hard-coded.  See defaultInstanceChargeType.
+		mdl.LoadBalancerAttribute.InstanceChargeType = defaultInstanceChargeType()
 	}
 
 	if mdl.LoadBalancerAttribute.DeleteProtection == "" {
