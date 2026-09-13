@@ -3,6 +3,7 @@ package slb
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -15,6 +16,7 @@ import (
 	"k8s.io/cloud-provider-alibaba-cloud/pkg/provider/alibaba/util"
 	"k8s.io/klog/v2"
 
+	sdkerrors "github.com/aliyun/alibaba-cloud-sdk-go/sdk/errors"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/slb"
 )
@@ -267,6 +269,36 @@ func (p SLBProvider) TagCLBResource(ctx context.Context, resourceId string, tags
 	return util.SDKError("TagResources", err)
 }
 
+// isActionNotFound reports whether the gateway answered "this API does not
+// exist here" rather than refusing the call on its merits.
+func isActionNotFound(err error) bool {
+	var se *sdkerrors.ServerError
+	if errors.As(err, &se) {
+		return se.ErrorCode() == "InvalidAction.NotFound"
+	}
+	return false
+}
+
+// describeCLBTags reads an SLB instance's tags through the SLB service's own
+// DescribeTags, the API that predates the centralised tag service.
+func (p SLBProvider) describeCLBTags(ctx context.Context, lbId string) ([]tag.Tag, error) {
+	req := slb.CreateDescribeTagsRequest()
+	req.LoadBalancerId = lbId
+
+	resp, err := p.auth.SLB.DescribeTags(req)
+	if err != nil {
+		return nil, util.SDKError("DescribeTags", err)
+	}
+	var tags []tag.Tag
+	for _, v := range resp.TagSets.TagSet {
+		tags = append(tags, tag.Tag{
+			Key:   v.TagKey,
+			Value: v.TagValue,
+		})
+	}
+	return tags, nil
+}
+
 func (p SLBProvider) ListCLBTagResources(ctx context.Context, lbId string) ([]tag.Tag, error) {
 	req := slb.CreateListTagResourcesRequest()
 	req.ResourceId = &[]string{lbId}
@@ -274,6 +306,17 @@ func (p SLBProvider) ListCLBTagResources(ctx context.Context, lbId string) ([]ta
 
 	resp, err := p.auth.SLB.ListTagResources(req)
 	if err != nil {
+		// An Apsara Stack gateway can predate the centralised tag service:
+		// SLB carries the older DescribeTags and answers ListTagResources with
+		// InvalidAction.NotFound. The CCM finds the load balancer it owns BY
+		// TAG, so without a fallback it can neither claim nor delete a CLB it
+		// just created — observed on ste2 on 2026-09-13, where a smoke test
+		// left an active CLB behind with both protections still on.
+		if isActionNotFound(err) {
+			klog.Infof("[%s] ListTagResources is not available on this gateway, "+
+				"falling back to the SLB DescribeTags API", lbId)
+			return p.describeCLBTags(ctx, lbId)
+		}
 		return nil, util.SDKError("ListTagResources", err)
 	}
 	var tags []tag.Tag
